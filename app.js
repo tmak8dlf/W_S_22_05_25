@@ -10,20 +10,57 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  dateStrings: true,
 });
 
 const app = express();
 const port = 3000;
 
 var corsOptions = {
-  origin: "http://localhost:3000/author/limit",
+  origin: "https://cdpn.io",
   optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
 };
 
 app.use(express.json());
 app.use(cors(corsOptions));
 
-app.get("/author/limit", async (req, res) => {
+app.post("/:user_code/limit", async (req, res) => {
+  const { user_code } = req.params;
+  const [lastMakeRows] = await pool.query(
+    `SELECT * 
+    FROM make
+    WHERE id = ?
+    ORDER BY id DESC
+    LIMIT 1`,
+    [user_code]
+  );
+  const newNo = lastMakeRows?.hit + 1 || 1;
+
+  const [rs] = await pool.query(
+    `INSERT INTO make
+    SET hit = ?`,
+    [newNo]
+  );
+  res.json(rs);
+});
+
+app.get("/:user_code/limit", async (req, res) => {
+  const { user_code } = req.params;
+  const [makeRows] = await pool.query(
+    `SELECT * 
+    FROM make
+    WHERE id = ?
+    ORDER BY id DESC`,
+    [user_code]
+  );
+  res.json({
+    resultCode: "S-1",
+    msg: "성공",
+    data: makeRows,
+  });
+});
+
+/*app.get("/author/limit", async (req, res) => {
   const [[rows]] = await pool.query(`SELECT *
   FROM make
   ORDER BY RAND()
@@ -36,5 +73,5 @@ app.get("/author", async (req, res) => {
 
   res.json(rows);
 });
-
+*/
 app.listen(port);
